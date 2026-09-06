@@ -1,45 +1,48 @@
-import AddJobForm from './AddJobForm'
 import { useState, useEffect } from 'react'
+import AddJobForm from './AddJobForm'
 
 export type Job = {
-  id: number
+  _id: string
   company: string
   role: string
   status: string
 }
 
-function App() {
-  const [jobs, setJobs] = useState<Job[]>(() => {
-    const saved = localStorage.getItem('jobs')
-    return saved ? JSON.parse(saved) : []
-  })
+const API_URL = 'http://localhost:5000/api/jobs'
 
+function App() {
+  const [jobs, setJobs] = useState<Job[]>([])
   const [filter, setFilter] = useState('All')
 
   useEffect(() => {
-    localStorage.setItem('jobs', JSON.stringify(jobs))
-  }, [jobs])
+    fetch(API_URL)
+      .then((res) => res.json())
+      .then((data) => setJobs(data))
+  }, [])
 
-  function addJob(company: string, role: string) {
-    const newJob: Job = {
-      id: Date.now(),
-      company,
-      role,
-      status: 'Applied',
-    }
-    setJobs([...jobs, newJob])
+  async function addJob(company: string, role: string) {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company, role }),
+    })
+    const newJob = await res.json()
+    setJobs([newJob, ...jobs])
   }
 
-  function deleteJob(id: number) {
-    setJobs(jobs.filter((job) => job.id !== id))
+  async function deleteJob(id: string) {
+    await fetch(`${API_URL}/${id}`, { method: 'DELETE' })
+    setJobs(jobs.filter((job) => job._id !== id))
   }
 
-  function updateStatus(id: number, newStatus: string) {
-    setJobs(
-      jobs.map((job) =>
-        job.id === id ? { ...job, status: newStatus } : job
-      )
-    )
+  async function updateStatus(id: string, newStatus: string) {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    const updatedJob = await res.json()
+    setJobs(jobs.map((job) => (job._id === id ? updatedJob : job)))
   }
 
   const filteredJobs =
@@ -73,7 +76,7 @@ function App() {
         <div className="space-y-2">
           {filteredJobs.map((job) => (
             <div
-              key={job.id}
+              key={job._id}
               className="bg-slate-800 border border-slate-700 rounded p-4 flex justify-between items-center"
             >
               <div>
@@ -84,7 +87,7 @@ function App() {
               <div className="flex items-center gap-3">
                 <select
                   value={job.status}
-                  onChange={(e) => updateStatus(job.id, e.target.value)}
+                  onChange={(e) => updateStatus(job._id, e.target.value)}
                   className="bg-slate-700 text-sm rounded px-2 py-1"
                 >
                   <option>Applied</option>
@@ -94,7 +97,7 @@ function App() {
                 </select>
 
                 <button
-                  onClick={() => deleteJob(job.id)}
+                  onClick={() => deleteJob(job._id)}
                   className="text-red-400 hover:text-red-300 text-sm"
                 >
                   Delete
