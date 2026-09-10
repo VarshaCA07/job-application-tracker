@@ -39,7 +39,6 @@ npm start
 
 
 Frontend:
-
 npm install
 npm run dev
 
